@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      dentists: {
+        Row: {
+          clinic_address: string
+          clinic_name: string
+          created_at: string
+          full_name: string
+          id: string
+          license_number: string
+          phone: string
+          specialization: string | null
+          updated_at: string
+          user_id: string
+          verification_documents: Json | null
+          verification_status: Database["public"]["Enums"]["dentist_verification_status"]
+          years_of_experience: number | null
+        }
+        Insert: {
+          clinic_address: string
+          clinic_name: string
+          created_at?: string
+          full_name: string
+          id?: string
+          license_number: string
+          phone: string
+          specialization?: string | null
+          updated_at?: string
+          user_id: string
+          verification_documents?: Json | null
+          verification_status?: Database["public"]["Enums"]["dentist_verification_status"]
+          years_of_experience?: number | null
+        }
+        Update: {
+          clinic_address?: string
+          clinic_name?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          license_number?: string
+          phone?: string
+          specialization?: string | null
+          updated_at?: string
+          user_id?: string
+          verification_documents?: Json | null
+          verification_status?: Database["public"]["Enums"]["dentist_verification_status"]
+          years_of_experience?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +70,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      dentist_verification_status: "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +197,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      dentist_verification_status: ["pending", "verified", "rejected"],
+    },
   },
 } as const

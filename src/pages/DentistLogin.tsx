@@ -35,9 +35,12 @@ const DentistLogin = () => {
     setIsLoading(true);
     setError("");
 
-    // Mock authentication - replace with actual API call later
+    // Mock authentication
     setTimeout(() => {
-      if (data.email === "dentist@example.com" && data.password === "password123") {
+      const email = data.email;
+      const password = data.password;
+      
+      if (email === "dentist@example.com" && password === "password123") {
         toast({
           title: "Login successful",
           description: "Welcome back, Doctor!",

@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { TodaysAppointments } from "@/components/dashboard/TodaysAppointments";
 import { ActivePatientsOverview } from "@/components/dashboard/ActivePatientsOverview";
 import { QuickReminders } from "@/components/dashboard/QuickReminders";
@@ -13,10 +16,61 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 
 const DentistDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [dentistName, setDentistName] = useState("Doctor");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/dentist/login");
+        return;
+      }
+
+      // Fetch dentist profile
+      const { data: dentistData, error } = await supabase
+        .from('dentists')
+        .select('full_name')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (dentistData) {
+        setDentistName(dentistData.full_name);
+      }
+
+      setIsLoading(false);
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        navigate("/dentist/login");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Logged out successfully",
+      description: "See you soon!",
+    });
     navigate("/dentist/login");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-background to-teal-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-background to-teal-50">
@@ -44,7 +98,7 @@ const DentistDashboard = () => {
         {/* Welcome Section */}
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-foreground mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Welcome, Doctor!
+            Welcome, {dentistName}!
           </h2>
           <p className="text-muted-foreground">Here's your comprehensive overview and analytics</p>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -31,31 +32,65 @@ const DentistLogin = () => {
     resolver: zodResolver(loginSchema),
   });
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dentist/dashboard");
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setError("");
 
-    // Mock authentication
-    setTimeout(() => {
-      const email = data.email;
-      const password = data.password;
-      
-      if (email === "dentist@example.com" && password === "password123") {
-        toast({
-          title: "Login successful",
-          description: "Welcome back, Doctor!",
-        });
-        navigate("/dentist/dashboard");
-      } else {
-        setError("Invalid email or password. Please try again.");
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "Invalid credentials",
-        });
+    try {
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        throw signInError;
       }
+
+      // Check if dentist profile exists
+      const { data: dentistData, error: dentistError } = await supabase
+        .from('dentists')
+        .select('verification_status')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (dentistError) {
+        throw new Error("Dentist profile not found. Please contact support.");
+      }
+
+      if (dentistData.verification_status === 'rejected') {
+        await supabase.auth.signOut();
+        throw new Error("Your account has been rejected. Please contact support.");
+      }
+
+      toast({
+        title: "Login successful",
+        description: dentistData.verification_status === 'pending' 
+          ? "Welcome! Your account is pending verification." 
+          : "Welcome back, Doctor!",
+      });
+
+      navigate("/dentist/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: err.message || "Invalid credentials",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -148,9 +183,12 @@ const DentistLogin = () => {
 
           {/* Forgot Password Link */}
           <div className="text-center">
-            <button className="text-sm text-primary hover:underline">
-              Forgot Password?
-            </button>
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link to="/dentist/register" className="text-primary hover:underline font-medium">
+                Register here
+              </Link>
+            </p>
           </div>
         </div>
 
